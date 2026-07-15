@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彩色五线谱转换器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f3f0;
+            color: #333;
+            min-height: 100vh;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+        header {
+            text-align: center;
+            padding: 30px 0 20px;
+            border-bottom: 2px solid #e0dcd5;
+            margin-bottom: 30px;
+        }
+        header h1 { font-size: 28px; font-weight: 700; color: #2c2416; margin-bottom: 8px; }
+        header p { color: #8c8478; font-size: 14px; }
+        .upload-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .upload-area {
+            border: 2px dashed #d0cbc3;
+            border-radius: 10px;
+            padding: 50px 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #faf9f7;
+        }
+        .upload-area:hover { border-color: #b8a894; background: #f5f2ed; }
+        .upload-area.dragover { border-color: #8b7355; background: #efe9e0; }
+        .upload-icon { font-size: 48px; margin-bottom: 10px; }
+        .upload-text { color: #6b6358; font-size: 15px; }
+        .upload-hint { color: #a0988c; font-size: 12px; margin-top: 6px; }
+        #file-input { display: none; }
+        .btn {
+            display: inline-block;
+            padding: 10px 28px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #8b7355; color: #fff; }
+        .btn-primary:hover { background: #6b5a43; }
+        .btn-primary:disabled { background: #c5bcb0; cursor: not-allowed; }
+        .btn-outline { background: #fff; color: #8b7355; border: 1px solid #8b7355; }
+        .btn-outline:hover { background: #f5f2ed; }
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .result-title { font-size: 16px; font-weight: 600; color: #2c2416; }
+        .download-btns { display: flex; gap: 8px; }
+        .svg-preview {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #e8e4de;
+            border-radius: 8px;
+            background: #fff;
+            padding: 10px;
+        }
+        .svg-preview img, .svg-preview embed { max-width: 100%; height: auto; }
+        .error-msg {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 14px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            width: 32px; height: 32px;
+            border: 3px solid #e8e4de;
+            border-top-color: #8b7355;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .info-card {
+            background: #faf9f7;
+            border: 1px solid #e8e4de;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .info-card h3 { font-size: 14px; color: #6b6358; margin-bottom: 10px; }
+        .info-card ul { padding-left: 18px; color: #8c8478; font-size: 13px; line-height: 1.8; }
+        .color-settings {
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .color-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c2416;
+            min-width: 70px;
+        }
+        .color-presets { display: flex; gap: 8px; flex-wrap: wrap; }
+        .color-preset {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            border: 2px solid #d0cbc3;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .color-preset:hover { transform: scale(1.15); }
+        .color-preset.active {
+            border-color: #333;
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #333;
+        }
+        .color-custom-wrap { display: flex; align-items: center; gap: 4px; }
+        .color-custom-input {
+            width: 32px; height: 32px;
+            border: 2px solid #d0cbc3;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 1px;
+        }
+        .color-hex-input {
+            width: 80px;
+            padding: 5px 8px;
+            border: 1px solid #d0cbc3;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+            text-align: center;
+        }
+        .color-preview {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-right: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>彩色五线谱转换器</h1>
+            <p>上传 MusicXML 乐谱，自动标注升降音颜色，让演奏更轻松</p>
+        </header>
+
+        <div class="color-settings">
+            <div class="color-row">
+                <span class="color-label">升号音颜色</span>
+                <div class="color-presets" id="sharp-presets">
+                    <div class="color-preset active" data-color="#FF00FF" style="background:#FF00FF" title="品红"></div>
+                    <div class="color-preset" data-color="#9B4400" style="background:#9B4400" title="棕色"></div>
+                    <div class="color-preset" data-color="#9B59B6" style="background:#9B59B6" title="紫色"></div>
+                    <div class="color-preset" data-color="#E74C3C" style="background:#E74C3C" title="红色"></div>
+                    <div class="color-preset" data-color="#FF8C00" style="background:#FF8C00" title="橙色"></div>
+                </div>
+                <div class="color-custom-wrap">
+                    <input type="color" class="color-custom-input" id="sharp-custom" value="#FF00FF">
+                    <input type="text" class="color-hex-input" id="sharp-hex" value="#FF00FF" maxlength="7">
+                </div>
+                <span style="color:#8c8478;font-size:13px;margin-left:8px;">降号音固定为蓝色</span>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">&#x1F4C4;</div>
+                <div class="upload-text">点击或拖拽 MusicXML 文件到此处</div>
+                <div class="upload-hint">支持 .xml / .musicxml / .mxl 格式</div>
+            </div>
+            <input type="file" id="file-input" accept=".xml,.musicxml,.mxl">
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div style="color:#8c8478;">正在处理乐谱...</div>
+        </div>
+
+        <div class="error-msg" id="error-msg"></div>
+
+        <div class="result-section" id="result-section">
+            <div class="result-header">
+                <span class="result-title">转换结果</span>
+                <span id="page-indicator" style="display:none;color:#8c8478;font-size:14px;margin-left:12px;"></span>
+                <div class="download-btns">
+                    <button class="btn btn-primary" id="btn-download-png">下载当前页 PNG</button>
+                    <button class="btn btn-outline" id="btn-download-svg">下载当前页 SVG</button>
+                    <button class="btn btn-outline" id="btn-download-all">下载全部 SVG</button>
+                    <button class="btn btn-outline" id="btn-reconvert">重新转换</button>
+                </div>
+            </div>
+            <div class="svg-preview" id="svg-preview"></div>
+            <div id="page-nav" style="display:none;text-align:center;margin-top:12px;gap:10px;justify-content:center;align-items:center;">
+                <button class="btn btn-outline" id="btn-prev-page" style="padding:4px 16px;font-size:13px;">上一页</button>
+                <span id="page-info" style="font-size:14px;color:#2c2416;"></span>
+                <button class="btn btn-outline" id="btn-next-page" style="padding:4px 16px;font-size:13px;">下一页</button>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h3>使用说明</h3>
+            <ul>
+                <li>上传 MusicXML 格式的乐谱文件（.xml / .musicxml / .mxl）</li>
+                <li><span class="color-preview" style="background:#FF00FF"></span>升号音 = 弹该音右侧黑键（颜色可自定义）</li>
+                <li><span class="color-preview" style="background:#0000FF"></span>降号音 = 弹该音左侧黑键（固定蓝色）</li>
+                <li>支持全部谱号（高音、低音、中音、次中音）和多声部</li>
+                <li>多页乐谱按原谱分页显示和导出</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const loading = document.getElementById('loading');
+        const errorMsg = document.getElementById('error-msg');
+        const resultSection = document.getElementById('result-section');
+        const svgPreview = document.getElementById('svg-preview');
+        const btnDownloadSvg = document.getElementById('btn-download-svg');
+        const btnDownloadPng = document.getElementById('btn-download-png');
+        const btnDownloadAll = document.getElementById('btn-download-all');
+        const btnReconvert = document.getElementById('btn-reconvert');
+
+        let currentColorSharp = '#FF00FF';
+        let currentPage = 0;
+        let pageSvgList = [];
+        let downloadLinks = [];
+        let currentTaskId = '';
+        let downloadAllUrl = '';
+        let lastFile = null;
+
+        function setupColorPicker(presetsId, customId, hexId) {
+            const presets = document.getElementById(presetsId);
+            const custom = document.getElementById(customId);
+            const hex = document.getElementById(hexId);
+            function selectColor(color) {
+                presets.querySelectorAll('.color-preset').forEach(p => {
+                    p.classList.toggle('active', p.dataset.color.toUpperCase() === color.toUpperCase());
+                });
+                custom.value = color;
+                hex.value = color;
+                currentColorSharp = color;
+            }
+            presets.addEventListener('click', (e) => {
+                const preset = e.target.closest('.color-preset');
+                if (!preset) return;
+                selectColor(preset.dataset.color);
+            });
+            custom.addEventListener('input', () => { const color = custom.value; hex.value = color; selectColor(color); });
+            hex.addEventListener('change', () => {
+                let val = hex.value.trim();
+                if (!val.startsWith('#')) val = '#' + val;
+                if (/^#[0-9A-Fa-f]{6}$/.test(val)) { selectColor(val.toUpperCase()); }
+                else { hex.value = custom.value; }
+            });
+        }
+        setupColorPicker('sharp-presets', 'sharp-custom', 'sharp-hex');
+
+        document.getElementById('btn-prev-page').addEventListener('click', () => { if (currentPage > 0) showPage(currentPage - 1); });
+        document.getElementById('btn-next-page').addEventListener('click', () => { if (currentPage < pageSvgList.length - 1) showPage(currentPage + 1); });
+
+        btnReconvert.addEventListener('click', () => { if (!lastFile) { alert('请先上传乐谱文件'); return; } doConvert(lastFile); });
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFile);
+
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('dragover'); });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) { fileInput.files = files; handleFile(); }
+        });
+
+        function handleFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            lastFile = file;
+            doConvert(file);
+        }
+
+        function doConvert(file) {
+            errorMsg.style.display = 'none';
+            resultSection.style.display = 'none';
+            loading.style.display = 'block';
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('color_sharp', currentColorSharp);
+            fetch('/api/convert', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.error) { showError(data.error); return; }
+                showResult(data);
+            })
+            .catch(err => { loading.style.display = 'none'; showError('网络错误: ' + err.message); });
+        }
+
+        function showResult(data) {
+            pageSvgList = data.svg_base64_list;
+            downloadLinks = data.downloads;
+            currentTaskId = data.task_id;
+            downloadAllUrl = data.download_all;
+            currentPage = 0;
+            const pageCount = data.page_count;
+            const pageIndicator = document.getElementById('page-indicator');
+            const pageNav = document.getElementById('page-nav');
+            const pageInfo = document.getElementById('page-info');
+            if (pageCount > 1) {
+                pageIndicator.style.display = 'inline';
+                pageIndicator.textContent = '共 ' + pageCount + ' 页';
+                pageNav.style.display = 'flex';
+                pageInfo.textContent = (currentPage + 1) + ' / ' + pageCount;
+            } else {
+                pageIndicator.style.display = 'none';
+                pageNav.style.display = 'none';
+            }
+            showPage(0);
+            resultSection.style.display = 'block';
+
+            btnDownloadPng.onclick = function() {
+                const b64 = pageSvgList[currentPage];
+                if (!b64) return;
+                const svgDataUrl = 'data:image/svg+xml;base64,' + b64;
+                const svgImg = new Image();
+                svgImg.onload = function() {
+                    var c = document.createElement('canvas');
+                    c.width = Math.max(svgImg.naturalWidth || svgImg.width || 800, 100);
+                    c.height = Math.max(svgImg.naturalHeight || svgImg.height || 600, 100);
+                    var cx = c.getContext('2d');
+                    cx.fillStyle = '#ffffff';
+                    cx.fillRect(0, 0, c.width, c.height);
+                    cx.drawImage(svgImg, 0, 0, c.width, c.height);
+                    c.toBlob(function(blob) {
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        var pn = pageSvgList.length > 1 ? '_page' + (currentPage + 1) : '';
+                        a.download = 'colored_score' + pn + '.png';
+                        a.click();
+                        setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+                    }, 'image/png');
+                };
+                svgImg.onerror = function() { alert('SVG 转换失败，请尝试下载 SVG 格式'); };
+                svgImg.src = svgDataUrl;
+            };
+
+            btnDownloadSvg.onclick = function() {
+                var a = document.createElement('a');
+                a.href = downloadLinks[currentPage];
+                var pn = pageSvgList.length > 1 ? '_page' + (currentPage + 1) : '';
+                a.download = 'colored_score' + pn + '.svg';
+                a.click();
+            };
+
+            btnDownloadAll.onclick = function() {
+                var a = document.createElement('a');
+                a.href = downloadAllUrl;
+                a.download = 'colored_score_' + currentTaskId + '_svg.zip';
+                a.click();
+            };
+        }
+
+        function showPage(idx) {
+            currentPage = idx;
+            var b64 = pageSvgList[idx];
+            var svgUrl = 'data:image/svg+xml;base64,' + b64;
+            svgPreview.innerHTML = '<img src="' + svgUrl + '" alt="彩色五线谱" style="max-width:100%;height:auto;border:1px solid #e8e4de;">';
+            var pageInfo = document.getElementById('page-info');
+            if (pageSvgList.length > 1) { pageInfo.textContent = (idx + 1) + ' / ' + pageSvgList.length; }
+        }
+
+        function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+    </script>
+</body>
+</html>
