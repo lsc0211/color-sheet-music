@@ -70,10 +70,11 @@ def _get_key_fifths(root) -> int:
 def _process_part(part, key_fifths: int):
     measures = _get_children(part, 'measure')
     for measure in measures:
-        _process_measure(measure, key_fifths)
+        key_fifths = _process_measure(measure, key_fifths)
 
 
-def _process_measure(measure, key_fifths: int):
+def _process_measure(measure, key_fifths: int) -> int:
+    """处理一个小节，返回更新后的调号 fifths 值"""
     current_accidentals = {}
 
     attributes = _get_child(measure, 'attributes')
@@ -101,7 +102,8 @@ def _process_measure(measure, key_fifths: int):
         alter = float(alter_el.text) if alter_el is not None and alter_el.text else 0.0
 
         accidental = _get_child(note, 'accidental')
-        if accidental is not None and accidental.text:
+        has_explicit_acc = accidental is not None and accidental.text
+        if has_explicit_acc:
             acc_text = accidental.text.strip()
             if acc_text == 'sharp':
                 alter = 1
@@ -114,16 +116,21 @@ def _process_measure(measure, key_fifths: int):
             elif acc_text == 'flat-flat':
                 alter = -2
 
-        note_key = f"{step}{octave}"
+        # 获取声部号（多声部隔离）
+        voice_el = _get_child(note, 'voice')
+        voice = voice_el.text if voice_el is not None else '1'
+        note_key = (step, octave, voice)
+
         if note_key in current_accidentals:
             saved_alter = current_accidentals[note_key]
-            if alter == 0:
+            # 有显式变音记号时不从缓存取（还原号要覆盖之前的临时升降）
+            if not has_explicit_acc and alter == 0:
                 alter = saved_alter
         elif alter == 0:
             alter = get_key_signature_note_alter(step, key_fifths)
 
-        if alter != 0:
-            current_accidentals[note_key] = alter
+        # 始终更新缓存（包括还原号 alter=0，覆盖之前的临时变音）
+        current_accidentals[note_key] = alter
 
         result = analyze_note(step, octave, alter, key_fifths)
 
@@ -144,3 +151,5 @@ def _process_measure(measure, key_fifths: int):
         color = result['color']
         if color != COLOR_BLACK:
             note.set('color', color)
+
+    return key_fifths
