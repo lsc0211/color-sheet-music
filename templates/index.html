@@ -172,6 +172,25 @@
             margin-right: 4px;
             border: 1px solid #ccc;
         }
+        .version-footer {
+            text-align: center;
+            padding: 18px 20px;
+            margin-top: 30px;
+            color: #b0a89c;
+            font-size: 12px;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            letter-spacing: 0.02em;
+        }
+        .ver-changes { color: #c5bcb0; font-size: 11px; }
+        @media print {
+            @page { margin: 0; }
+            body { background: white; }
+            .container { max-width: none; padding: 0; }
+            header, .color-settings, .upload-section, .info-card,
+            .result-header, .download-btns, #page-nav, .version-footer { display: none !important; }
+            .svg-preview { border: none !important; padding: 0 !important; }
+            .svg-preview img { width: 100%; page-break-after: always; }
+        }
     </style>
 </head>
 <body>
@@ -409,6 +428,17 @@
         }
 
         function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+
+        // 加载版本信息
+        fetch('/api/version').then(r => r.json()).then(v => {
+            document.getElementById('ver-commit').textContent = v.commit;
+            document.getElementById('ver-date').textContent = v.date;
+            document.getElementById('ver-changes').textContent = v.changes;
+        }).catch(() => {});
     </script>
+    <div class="version-footer">
+        v1.1 | commit <span id="ver-commit">02e9e23</span> | <span id="ver-date">2026-07-17</span>
+        <br><span class="ver-changes" id="ver-changes">修复还原记号+多声部+溢出检测</span>
+    </div>
 </body>
 </html>

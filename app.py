@@ -36,6 +36,16 @@ def health():
     return jsonify({'status': 'ok', 'service': '彩色五线谱转换器'})
 
 
+@app.route('/api/version')
+def version():
+    return jsonify({
+        'version': '1.1',
+        'commit': '02e9e23',
+        'date': '2026-07-17',
+        'changes': '修复还原记号颜色污染、多声部碰撞、跨小节调号传播；新增溢出检测双遍渲染'
+    })
+
+
 @app.route('/api/test_vrv')
 def test_vrv():
     import verovio, os, sys
